@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "interviews"
+version = "0.1.0"
+description = ""
+authors = ["occy88 <octavio.delser@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+tdl-client-python = "*"
+coverage = "^7.2.7"
+pytest-cov = "^4.1.0"
+pytest-xdist = "^3.3.1"
+pre-commit = "^3.3.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
