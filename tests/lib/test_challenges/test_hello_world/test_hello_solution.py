@@ -1,5 +1,5 @@
 import pytest
-from solutions.hello_world import hello_world
+from challenges.hello_world import hello_world
 
 
 class TestHelloWorld:
