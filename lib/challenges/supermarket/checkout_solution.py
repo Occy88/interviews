@@ -1,136 +1,148 @@
-import math
+from collections import Counter
 
 
-# noinspection PyUnusedLocal
-# skus = unicode string
-def checkout(skus):
-
-
-    price_table = {
-        'A': {'price': 50, 'special_offer': [(5, 200), (3, 130)]},
-        'B': {'price': 30, 'special_offer': [(2, 45)]},
-        'C': {'price': 20},
-        'D': {'price': 15},
-        'E': {'price': 40, 'special_offer': [(2, 'B')]},
-        'F': {'price': 10, 'special_offer': [(2, 'F')]},
-        'G': {'price': 20},
-        'H': {'price': 10, 'special_offer': [(5, 45), (10, 80)]},
-        'I': {'price': 35},
-        'J': {'price': 60},
-        'K': {'price': 70, 'special_offer': [(2, 120)]},
-        'L': {'price': 90},
-        'M': {'price': 15},
-        'N': {'price': 40, 'special_offer': [(3, 'M')]},
-        'O': {'price': 10},
-        'P': {'price': 50, 'special_offer': [(5, 200)]},
-        'Q': {'price': 30, 'special_offer': [(3, 80)]},
-        'R': {'price': 50, 'special_offer': [(3, 'Q')]},
-        'S': {'price': 20, 'special_offer_any_three': [(3, 45)]},
-        'T': {'price': 20, 'special_offer_any_three': [(3, 45)]},
-        'U': {'price': 40, 'special_offer': [(3, 'U')]},
-        'V': {'price': 50, 'special_offer': [(2, 90), (3, 130)]},
-        'W': {'price': 20},
-        'X': {'price': 17, 'special_offer_any_three': [(3, 45)]},
-        'Y': {'price': 20, 'special_offer_any_three': [(3, 45)]},
-        'Z': {'price': 21, 'special_offer_any_three': [(3, 45)]}
-
+def checkout(items):
+    prices = {
+        'A': 50,
+        'B': 30,
+        'C': 20,
+        'D': 15,
+        'E': 40,
+        'F': 10,
+        'G': 20,
+        'H': 10,
+        'I': 35,
+        'J': 60,
+        'K': 70,
+        'L': 90,
+        'M': 15,
+        'N': 40,
+        'O': 10,
+        'P': 50,
+        'Q': 30,
+        'R': 50,
+        'S': 20,
+        'T': 20,
+        'U': 40,
+        'V': 50,
+        'W': 20,
+        'X': 17,
+        'Y': 20,
+        'Z': 21,
     }
 
-    item_counts = {}
+    special_double_offers = {
+        'A': [{'quantity': 5, 'price': 200}, {'quantity': 3, 'price': 130}],
+        'H': [{'quantity': 10, 'price': 80}, {'quantity': 5, 'price': 45}],
+        'V': [{'quantity': 3, 'price': 130}, {'quantity': 2, 'price': 90}],
+    }
+    special_price_offers = {
+        'B': {'quantity': 2, 'price': 45},
+        'K': {'quantity': 2, 'price': 120},
+        'P': {'quantity': 5, 'price': 200},
+        'Q': {'quantity': 3, 'price': 80},
+    }
+    special_extra_offers = {
+        'F': {'quantity': 2, 'free': 'F'},
+        'U': {'quantity': 3, 'free': 'U'},
+    }
+    special_free_offers = {
+        'E': {'quantity': 2, 'free': 'B'},
+        'N': {'quantity': 3, 'free': 'M'},
+        'R': {'quantity': 3, 'free': 'Q'},
+    }
+
+    # check if skus is empty
+    if not items:
+        return 0
+
+    # check if skus is a string
+    if not isinstance(items, str):
+        return -1
+
+    # count the frequency of each sku
+    item_counts = Counter(items)
     total_price = 0
-    skus = sorted(skus)
-    for item in skus:
-        if item in price_table:
-            item_counts[item] = item_counts.get(item, 0) + 1
-        else:
-            return -1
 
-    item_counts_copy = item_counts.copy()
-    count_special_three = 0
-    running_offer_price = 0
-    min_price = 100
-    prices = []
-    for item, count in item_counts.items():
-        if 'special_offer' in price_table[item]:
-            special_offers = sorted(price_table[item]['special_offer'], reverse=True)
+    # check if skus contains only valid skus
+    if any([sku not in prices.keys() for sku in item_counts.keys()]):
+        return -1
 
-            for offer in special_offers:
+    # select from special_free_offer items first if available
+    for free_item, offer in special_free_offers.items():
+        if free_item in item_counts.keys() and offer['free'] in item_counts.keys():
+            count = item_counts[free_item]
+            total_free = count // offer['quantity']
+            if total_free >= 1:
+                item_counts[offer['free']] -= total_free
+                if item_counts[offer['free']] < 0:
+                    item_counts[offer['free']] = 0
 
-                offer_qty, offer_value = offer
+    # apply special_combo_offers
+    # special combo list is sorted from low to high prices
+    special_combo_offers = ['X', 'S', 'T', 'Y', 'Z']
+    # Creating a new Counter with selected items
+    selected_counts = Counter(
+        {item: item_counts[item] for item in special_combo_offers if
+         item in item_counts.keys()})
+    # Summing the values of the Counter
+    total_selected_count = sum(selected_counts.values())
 
-                if not isinstance(offer_value, str):
+    if total_selected_count >= 3:
+        total_price += (total_selected_count // 3) * 45
+        # Sort the Counter by the special_combo_offers list to favour the customer
+        sorted_counter = sorted(selected_counts.items(),
+                                key=lambda x: special_combo_offers.index(x[0]))
+        total_combo_remainder_count = total_selected_count % 3
+        if total_combo_remainder_count > 0:
+            y = 0
+            while y <= total_combo_remainder_count:
+                # select the key value pairs from the sorted counter to favour the customer
+                key_y, value_y = sorted_counter[y]
+                # if the value_y is greater that remainder, use it
+                if value_y >= total_combo_remainder_count:
+                    total_price += prices[key_y] * total_combo_remainder_count
+                    break
+                item_remainder_count = value_y % 3
+                if item_remainder_count == 0:
+                    y += 1
+                    total_combo_remainder_count -= 1
+                    continue
+                total_price += prices[key_y] * item_remainder_count
+                y += item_remainder_count
+                total_combo_remainder_count -= item_remainder_count
 
-                    while count >= offer_qty:
-                        total_price += offer_value
-                        count -= offer_qty
+        # Subtract the selected_counts from the original counter
+        item_counts = item_counts - selected_counts
 
-                if offer_value in item_counts and count >= offer_qty:
+    if len(item_counts) > 0:
+        for item, count in item_counts.items():
+            # apply special offers
+            if item in special_double_offers.keys():
+                offer = special_double_offers[item]
+                for o in offer:
+                    if count >= o['quantity']:
+                        total_price += (count // o['quantity']) * o['price']
+                        count %= o['quantity']
 
-                    count_offer = count
+            if item in special_price_offers.keys():
+                offer = special_price_offers[item]
+                if count >= offer['quantity']:
+                    total_price += (count // offer['quantity']) * offer['price']
+                    count %= offer['quantity']
 
-                    while count_offer >= offer_qty:
+            if item in special_extra_offers.keys():
+                offer = special_extra_offers[item]
+                offer_quantity = offer['quantity'] + 1
+                if count >= offer_quantity:
+                    free_count = count // offer_quantity
+                    remainder_count = count % offer_quantity
+                    if remainder_count == 1:
+                        free_count += 1
+                    count = count - free_count + remainder_count
 
-                        if item != offer_value:
-                            item_counts[offer_value] -= 1
-
-                        elif item == offer_value and count_offer > offer_qty:
-                            item_counts[offer_value] -= 1
-                            total_price -= price_table[offer_value]["price"]
-
-                        count_offer -= offer_qty
-
-                    if item_counts[offer_value] == 0:
-
-                        if "special_offer" in price_table[offer_value]:
-                            total_price = 0
-                        else:
-                            total_price -= item_counts_copy[offer_value] * price_table[offer_value]["price"]
-
-                    elif item_counts[offer_value] >= price_table[offer_value]["special_offer"][0][0] and item != offer_value:
-                        total_price -= price_table[offer_value]["price"]
-
-                    elif item_counts[offer_value] < price_table[offer_value]["special_offer"][0][0]:
-                        total_price += item_counts[offer_value] * price_table[offer_value]["price"]
-                        total_price -= price_table[offer_value]["special_offer"][0][1]
-
-        elif "special_offer_any_three" in price_table[item]:
-            count_special_three += count
-            running_offer_price += count * price_table[item]["price"]
-
-            prices.append(price_table[item]["price"])
-
-            if price_table[item]["price"] < min_price:
-                min_price = price_table[item]["price"]
-
-            if count_special_three == 3:
-                running_offer_price -= count * price_table[item]["price"]
-                total_price -= running_offer_price
-                total_price += price_table[item]["special_offer_any_three"][0][1]
-                count_special_three = 0
-                running_offer_price = 0
-                continue
-            elif count_special_three > 3:
-                running_offer_price -= count * price_table[item]["price"]
-                total_price -= running_offer_price
-                total_price += price_table[item]["special_offer_any_three"][0][1]
-
-                count_special_three -= 3
-                running_offer_price = count_special_three * price_table[item]["price"]
-                count = count_special_three
-
-            if count_special_three > 1 and len(prices) > 1:
-                prices = sorted(prices)
-                running_offer_price = 0
-
-                for i in range(count_special_three):
-                    total_price += prices[i]
-                    running_offer_price += prices[i]
-                    count -= 1
-
-            elif count_special_three == 1:
-
-                price_table[item]["price"] = min_price
-
-        total_price += count * price_table[item]['price']
+                    # add the price of the remaining items
+            total_price += count * prices.get(item, 0)
 
     return total_price
+
