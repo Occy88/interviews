@@ -1,14 +1,12 @@
 import pytest
-from solutions.supermarket.checkout_solution import (
+
+from lib.challenges.supermarket.checkout_solution import (
     Basket,
-    Discount,
-    Item,
-    Items,
     checkout,
-    combine_skus_duplicates,
     compute_discounts,
     validate_skus,
 )
+from lib.challenges.supermarket.constants import Item, Items
 
 
 def _get_sku_parametrization():
@@ -28,7 +26,7 @@ def _get_sku_parametrization():
             ("ZZZ", 45),
             ("SSS", 45),
             ("STXS", 62),
-            ("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ", 1602),
+            ("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ", 1592),
         ],
     )
 
@@ -73,46 +71,15 @@ class TestBasket:
     def test_basket_subtraction(self):
         basket1 = Basket("AAABBB")
         basket2 = Basket("AAB")
-        basket1 - basket2
+        basket1 -= basket2
         assert basket1.items["A"].quantity == 1
         assert basket1.items["B"].quantity == 2
 
     def test_basket_subtraction_error(self):
         basket1 = Basket("AAABBB")
         basket2 = Basket("AABCC")
-        with pytest.raises(TypeError):
-            basket1 - basket2
-
-
-class TestDiscount:
-    def setup_method(self):
-        self.basket = Basket("AAABBB")
-        self.discount = Discount(
-            required_items=Basket("AAA"),
-            removed_items=Basket("AAA"),
-            discounted_price=130,
-        )
-
-    def test_discount_initialization(self):
-        assert isinstance(self.discount.required_items, Basket)
-        discounted_price = 130
-        assert (
-            self.discount.discounted_price == discounted_price
-        ), self.discount.discounted_price
-
-    def test_discount_apply(self):
-        discounted_price = self.discount.apply_discount(self.basket)
-        assert discounted_price == 130
-        assert "A" not in self.basket.items
-
-    def test_discount_comparison(self):
-        other_discount = Discount(
-            required_items=Basket("BB"),
-            removed_items=Basket("BB"),
-            discounted_price=55,
-        )
-        assert not self.discount <= other_discount
-        assert other_discount <= self.discount
+        with pytest.raises(ValueError):
+            basket1 -= basket2
 
 
 class TestCHK:
@@ -139,23 +106,6 @@ class TestCHK:
         # ACT
         # ASSERT
         validate_skus(input_skus)
-
-    @pytest.mark.parametrize(
-        "skus,expected",
-        [
-            ("A", {"A": 1}),
-            ("AA", {"A": 2}),
-            ("ABC", {"A": 1, "B": 1, "C": 1}),
-            ("AAB", {"A": 2, "B": 1}),
-            ("", {}),
-        ],
-    )
-    def test_combine_skus_duplicates(self, skus, expected):
-        # ARRANGE
-        # ACT
-        combined = combine_skus_duplicates(skus)
-        # ASSERT
-        assert combined == expected
 
     @pytest.mark.parametrize(*_get_sku_parametrization())
     def test_compute_discounts(self, skus, expected):

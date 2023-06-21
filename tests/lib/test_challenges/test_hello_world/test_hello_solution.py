@@ -1,13 +1,13 @@
 import pytest
-from solutions.hello_world import hello_solution
+from challenges.hello_world import hello_world
 
 
-class TestHelloSolution:
+class TestHelloWorld:
     def test_hello_correct_format(self, greeting_template):
         # ARRANGE
         name = "John"
         # ACT
-        result = hello_solution.hello(name)
+        result = hello_world.hello(name)
         # ASSERT
         assert result == greeting_template.format(name)
 
@@ -17,4 +17,4 @@ class TestHelloSolution:
         # ACT
         # ASSERT
         with pytest.raises(TypeError):
-            hello_solution.hello(name)
+            hello_world.hello(name)
