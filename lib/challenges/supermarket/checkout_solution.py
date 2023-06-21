@@ -1,178 +1,128 @@
-
-
 # noinspection PyUnusedLocal
 # skus = unicode string
-# import re
 
-def multi_offers(basket, base_item, offer_qty): # b, A, [5,3]
+item_price_map = {
+    "A": 50,
+    "B": 30,
+    "C": 20,
+    "D": 15,
+    "E": 40,
+    "F": 10,
+    "G": 20,
+    "H": 10,
+    "I": 35,
+    "J": 60,
+    "K": 70,
+    "L": 90,
+    "M": 15,
+    "N": 40,
+    "O": 10,
+    "P": 50,
+    "Q": 30,
+    "R": 50,
+    "S": 20,
+    "T": 20,
+    "U": 40,
+    "V": 50,
+    "W": 20,
+    "X": 17,
+    "Y": 20,
+    "Z": 21,
+}
 
-    curr_qty = basket.get(base_item, 0)
+item_bogof_map = {
+    "E": {2: "B"},
+    "F": {3: "F"},
+    "N": {3: "M"},
+    "R": {3: "Q"},
+    "U": {4: "U"},
+}
 
-    for q in offer_qty:
-        sp_item = str(q) + base_item # 5A
-        sp_item_qty = int(curr_qty/q)
-        basket[sp_item] = sp_item_qty
-        curr_qty = curr_qty - (sp_item_qty * q)
-    basket[base_item] = curr_qty
+item_multi_price_map = {
+    "A": {3: 130, 5: 200},
+    "B": {2: 45},
+    "H": {5: 45, 10: 80},
+    "K": {2: 120},
+    "P": {5: 200},
+    "Q": {3: 80},
+    "V": {2: 90, 3: 130},
+}
 
-
-def other_item_free(basket, base_item, qty, free_item):
-    free_items_qty = int(basket.get(base_item, 0) / qty)
-    basket[free_item] = max(basket.get(free_item, 0) - free_items_qty, 0)
-
-import sys
-
-def min_postive(k):
-    min_elem = sys.maxsize
-    for e in k:
-        if min_elem > e > 0:
-            min_elem = e
-    return min_elem
+item_buy_any_three = {"S", "T", "X", "Y", "Z"}
 
 
-def group_offer(group_qts): # static
-    # [50 7 8 6 34]
+def calculate_buy_any_three(skus: str, total: int):
+    item_price_order = [
+        item
+        for item, _ in sorted(item_price_map.items(), key=lambda x: x[1], reverse=True)
+        if item in item_buy_any_three
+    ]
+    skus_filter = [item for item in skus if item in item_buy_any_three]
+    d = {v: i for i, v in enumerate(item_price_order)}
+    r = sorted(skus_filter, key=lambda v: d[v])
+    div, count = divmod(len(r), 3)
+    total += div * 45
+    # Left over items
+    if count > 0:
+        for item in r[-count:]:
+            total += item_price_map[item]
+    return total
 
-    tot_items = sum(group_qts)
-    tot_groups = int(tot_items/3)
-    return tot_groups
+
+def calculate_multi_price(total: int, item: str, count: int):
+    """Using the multiprice offer, add to the total value."""
+    keys_sorted = sorted(item_multi_price_map[item].keys(), reverse=True)
+    for key in keys_sorted:
+        div, count = divmod(count, key)
+        total += div * item_multi_price_map[item][key]
+    total += count * item_price_map[item]
+    return total
 
 
-    # if group_qts.count(0) >= 3:
-    #     return 0
-    #
-    # min_num = min_postive(group_qts)
-    #
-    # counter = 0
-    # for i in range(5):
-    #     if group_qts[i] != 0 :
-    #         group_qts[i] -= min_num
-    #         counter += 1
-    #
-    #     if counter == 3:
-    #         break
-    # return min_num + group_offer(group_qts)
+def calculate_bogof_price(item_count: dict, total: int, item: str, count: int):
+    """Using the BOGOF offer, add to the total value."""
+    num, free_item = (
+        list(item_bogof_map[item].keys())[0],
+        list(item_bogof_map[item].values())[0],
+    )
+    div, remainder = divmod(count, num)
+    if free_item in item_count.keys():
+        item_count[free_item] -= div
+        if item_count[free_item] < 0:
+            item_count[free_item] = 0
+    total += item_count[item] * item_price_map[item]
+    return total
 
+
+def calculate_price(skus: str, item_count: dict) -> int:
+    """Calculate total price by applying BOGOF offers first, multiprice offers,
+    and then any remaining items."""
+    total = 0
+    for item in item_buy_any_three:
+        if item in item_count.keys():
+            item_count.pop(item)
+    total = calculate_buy_any_three(skus, total)
+    for item in item_bogof_map.keys():
+        if item in item_count.keys():
+            total = calculate_bogof_price(item_count, total, item, item_count[item])
+            item_count.pop(item)
+    for item in item_multi_price_map.keys():
+        if item in item_count.keys():
+            total = calculate_multi_price(total, item, item_count[item])
+            item_count.pop(item)
+    for item in item_count.keys():
+        total += item_count[item] * item_price_map[item]
+    return total
 
 
 def checkout(skus):
-
-    if skus == "":
-        return 0
-
-    if skus is None or type(skus) is not str:
-        return -1
-
-    skus = list(skus)
-
-    sku_qtys = {}
+    """Calculate price from string of items."""
+    item_count = {}
     for item in skus:
-        # pattern = re.compile("[A-Z]]")
-        # is_match = pattern.match(item)
-        if item not in {"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"}:
+        if item not in item_price_map.keys():
             return -1
-        sku_qtys[item] = sku_qtys.get(item, 0) + 1
-
-    prices = {
-        "5A": 200,
-        "3A": 130,
-        "2B": 45,
-        "A": 50,
-        "B": 30,
-        "C": 20,
-        "D": 15,
-        "E": 40,
-        "F": 10,
-        "3F": 20,
-
-        "G": 20,
-        "H": 10,
-        "5H": 45,
-        "10H": 80,
-
-        "I": 35,
-        "J": 60,
-        "K": 70,
-        "2K": 120,
-        "L": 90,
-        "M": 15,
-        "N": 40,
-        "O": 10,
-        "P": 50,
-        "5P": 200,
-        "Q": 30,
-        "3Q": 80,
-        "R": 50,
-        "S": 20,
-        "T": 20,
-        "U": 40,
-        "4U": 120,
-        "V": 50,
-        "2V": 90,
-        "3V": 130,
-        "W": 20,
-        "X": 17,
-        "Y": 20,
-        "Z": 21,
-        "Group": 45
-    }
-
-    other_item_free(sku_qtys, "E", 2, "B")
-    other_item_free(sku_qtys, "N", 3, "M")
-    other_item_free(sku_qtys, "R", 3, "Q")
-
-    multi_offers(sku_qtys, "A", [5, 3])
-    multi_offers(sku_qtys, "B", [2])
-    multi_offers(sku_qtys, "F", [3])
-
-    multi_offers(sku_qtys, "H", [10, 5])
-    multi_offers(sku_qtys, "K", [2])
-    multi_offers(sku_qtys, "P", [5])
-    multi_offers(sku_qtys, "Q", [3])
-    multi_offers(sku_qtys, "U", [4])
-    multi_offers(sku_qtys, "V", [3, 2])
-
-    group_qts = [sku_qtys.get("Z", 0), sku_qtys.get("S", 0), sku_qtys.get("T", 0), sku_qtys.get("Y", 0),
-                 sku_qtys.get("X", 0)]
-
-    num_groups = group_offer(group_qts)
-
-    sku_qtys["Group"] = num_groups
-
-    rem_items = sum(group_qts) % 3
-
-    if rem_items != 0:
-        z_list = ["Z"] * group_qts[0]
-        s_list = ["S"] * group_qts[1]
-        t_list = ["T"] * group_qts[2]
-        y_list = ["Y"] * group_qts[3]
-        x_list = ["X"] * group_qts[4]
-
-        z_list.extend(s_list)
-        z_list.extend(t_list)
-        z_list.extend(y_list)
-        z_list.extend(x_list)
-
-        rems = z_list[-rem_items:]
-
-        sku_qtys["Z"] = rems.count("Z")
-        sku_qtys["S"] = rems.count("S")
-        sku_qtys["T"] = rems.count("T")
-        sku_qtys["Y"] = rems.count("Y")
-        sku_qtys["X"] = rems.count("X")
-
-    else:
-        sku_qtys["Z"] = 0
-        sku_qtys["S"] = 0
-        sku_qtys["T"] = 0
-        sku_qtys["Y"] = 0
-        sku_qtys["X"] = 0
-
-    total_val = 0
-    for item in sku_qtys:
-        total_val = total_val + (sku_qtys[item] * prices[item])
-
-    return total_val
-
-
-
+        if item in item_count.keys():
+            item_count[item] += 1
+        else:
+            item_count[item] = 1
+    return calculate_price(skus, item_count)
