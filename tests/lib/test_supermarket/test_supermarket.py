@@ -1,31 +1,52 @@
-import pytest
-
 from solutions.CHK import checkout_solution
+import unittest
 
-def test_does_individual_checkout() -> None:
-    assert checkout_solution.checkout("A") == 50
-    assert checkout_solution.checkout("B") == 30
-    assert checkout_solution.checkout("C") == 20
-    assert checkout_solution.checkout("D") == 15
+class TestSum(unittest.TestCase):
 
-def test_does_checkout_with_multiple_items_no_discounts() -> None:
-    assert checkout_solution.checkout("ABCD") == 115
+    def test_checkout_with_valid_input(self):
+        self.assertEqual(checkout_solution.checkout("AAABCD"), 195)
+        self.assertEqual(checkout_solution.checkout("AAAABBB"), 255)
+        self.assertEqual(checkout_solution.checkout("A"), 50)
+        self.assertEqual(checkout_solution.checkout("B"), 30)
+        self.assertEqual(checkout_solution.checkout("ABAB"), 145)
+        self.assertEqual(checkout_solution.checkout(""), 0)
 
-def test_does_checkout_with_multiple_items_with_discounts() -> None:
-    assert checkout_solution.checkout("AAA") == 130
-    assert checkout_solution.checkout("BB") == 45
-    assert checkout_solution.checkout("AAAAAA") == 260
-    assert checkout_solution.checkout("AAAAA") == 230
-    assert checkout_solution.checkout("AAAA") == 180
-    assert checkout_solution.checkout("BBBB") == 90
-    assert checkout_solution.checkout("BBB") == 75
-    assert checkout_solution.checkout("BBBAA") == 175
+        self.assertEqual(checkout_solution.checkout("AAAAA"), 200)
+        self.assertEqual(checkout_solution.checkout("AAA"), 130)
+        self.assertEqual(checkout_solution.checkout("AAAAABBAAAA"), 425)
 
-def test_handle_cross_referenced_discounts() -> None:
-    assert checkout_solution.checkout("EEB") == 80
-    assert checkout_solution.checkout("EEEB") == 120
-    assert checkout_solution.checkout("EEEEBB") == 160
-    assert checkout_solution.checkout("BEBEEE") == 160
+        self.assertEqual(checkout_solution.checkout("EE"), 80)
+        self.assertEqual(checkout_solution.checkout("EEEEEB"), 200)
+        self.assertEqual(checkout_solution.checkout("EEEEE"), 200)
+        self.assertEqual(checkout_solution.checkout("EEB"), 80)
+        self.assertEqual(checkout_solution.checkout("EEEB"), 120)
+        self.assertEqual(checkout_solution.checkout("EEEEBB"), 160)
 
-def test_does_checkout_with_invalid_items() -> None:
-    assert checkout_solution.checkout("Z") == -1
+        self.assertEqual(checkout_solution.checkout("F"), 10)
+        self.assertEqual(checkout_solution.checkout("FF"), 20)
+        self.assertEqual(checkout_solution.checkout("FFF"), 20)
+        self.assertEqual(checkout_solution.checkout("FFFF"), 30)
+        self.assertEqual(checkout_solution.checkout("FFFFF"), 40)
+        self.assertEqual(checkout_solution.checkout("FFFFFF"), 40)
+
+        self.assertEqual(checkout_solution.checkout("VVV"), 130)
+        self.assertEqual(checkout_solution.checkout("VVVV"), 180)
+        self.assertEqual(checkout_solution.checkout("VVVVV"), 220)
+
+        # self.assertEqual(checkout_solution.checkout("XYZST"), 45 + 17 + 20)
+        # self.assertEqual(checkout_solution.checkout("XXX"), 17 * 3)
+        # self.assertEqual(checkout_solution.checkout("XXXSSTTZZZ"), 90 + 21 + (17*3))
+
+        self.assertEqual(checkout_solution.checkout("SSS"), 45)
+        self.assertEqual(checkout_solution.checkout("SSSZ"), 65)
+        self.assertEqual(checkout_solution.checkout("ZZZ"), 45)
+        self.assertEqual(checkout_solution.checkout("ZX"), 38)
+        self.assertEqual(checkout_solution.checkout("ZZZX"), 45+17)
+        self.assertEqual(checkout_solution.checkout("ZZZSSSX"), 90 + 17)
+        self.assertEqual(checkout_solution.checkout("ZZZZ"), 45 + 21)
+
+
+    def test_checkout_with_invalid_input(self):
+        self.assertEqual(checkout_solution.checkout(None), -1)
+        self.assertEqual(checkout_solution.checkout(1234), -1)
+
