@@ -1,170 +1,136 @@
+import math
+
 
 # noinspection PyUnusedLocal
 # skus = unicode string
-
-from collections import defaultdict
-
-# Individual default prices for each SKU
-# All SKUs in this map are assumed to be valid and vice-versa
-price_map = {
-    "A" : 50,
-    "B" : 30,
-    "C" : 20,
-    "D" : 15,
-    "E" : 40,
-    "F" : 10,
-    "G" : 20,
-    "H" : 10,
-    "I" : 35,
-    "J" : 60,
-    "K" : 70,
-    "L" : 90,
-    "M" : 15,
-    "N" : 40,
-    "O" : 10,
-    "P" : 50,
-    "Q" : 30,
-    "R" : 50,
-    "S" : 20,
-    "T" : 20,
-    "U" : 40,
-    "V" : 50,
-    "W" : 20,
-    "X" : 17,
-    "Y" : 20,
-    "Z" : 21
-}
-
-# for each deal/tuple corresponding to a SKU this map takes the form of:
-# tuple[0]SKU for tuple[1]
-offer_map = {
-    "A" : [(5, 200) ,(3, 130)],
-    "B" : [(2, 45)],
-    "H" : [(10, 80), (5, 45)],
-    "K" : [(2, 120)],
-    "P" : [(5, 200)],
-    "Q" : [(3, 80)],
-    "V" : [(3, 130), (2, 90)],
-}
-
-# for each deal/tuple corresponding to a SKU this makes takes the form of:
-# tuple[0]SKU get tuple[1] tuple[2] free
-offer_map_free = {
-    "E" : [(2, 1, "B")],
-    "F" : [(2, 1, "F")],
-    "N" : [(3, 1, "M")],
-    "R" : [(3, 1, "Q")],
-    "U" : [(3, 1, "U")],
-}
-
-r5_deal = ["Z", "Y", "S", "T", "X"]
-
 def checkout(skus):
-    sku_freq = defaultdict(int)
-    # create frequency mapping logging how many times each SKU was seen in our input
-    # returns -1 if SKU not in our price_map
-    for sku in skus:
-        if sku not in price_map:
-            return -1
-        sku_freq[sku] += 1
 
-    # apply bundle deal
-    # r5_freq = defaultdict(int)
-    total_checkout_value = 0
 
-    total_r5_items = 0
-    for sku, freq in sku_freq.items():
-        if sku in r5_deal:
-            # r5_freq[sku] = freq
-            total_r5_items += freq
+    price_table = {
+        'A': {'price': 50, 'special_offer': [(5, 200), (3, 130)]},
+        'B': {'price': 30, 'special_offer': [(2, 45)]},
+        'C': {'price': 20},
+        'D': {'price': 15},
+        'E': {'price': 40, 'special_offer': [(2, 'B')]},
+        'F': {'price': 10, 'special_offer': [(2, 'F')]},
+        'G': {'price': 20},
+        'H': {'price': 10, 'special_offer': [(5, 45), (10, 80)]},
+        'I': {'price': 35},
+        'J': {'price': 60},
+        'K': {'price': 70, 'special_offer': [(2, 120)]},
+        'L': {'price': 90},
+        'M': {'price': 15},
+        'N': {'price': 40, 'special_offer': [(3, 'M')]},
+        'O': {'price': 10},
+        'P': {'price': 50, 'special_offer': [(5, 200)]},
+        'Q': {'price': 30, 'special_offer': [(3, 80)]},
+        'R': {'price': 50, 'special_offer': [(3, 'Q')]},
+        'S': {'price': 20, 'special_offer_any_three': [(3, 45)]},
+        'T': {'price': 20, 'special_offer_any_three': [(3, 45)]},
+        'U': {'price': 40, 'special_offer': [(3, 'U')]},
+        'V': {'price': 50, 'special_offer': [(2, 90), (3, 130)]},
+        'W': {'price': 20},
+        'X': {'price': 17, 'special_offer_any_three': [(3, 45)]},
+        'Y': {'price': 20, 'special_offer_any_three': [(3, 45)]},
+        'Z': {'price': 21, 'special_offer_any_three': [(3, 45)]}
 
-    total_r5_bundles = total_r5_items // 3
-    total_checkout_value = total_r5_bundles * 45
+    }
 
-    counter = total_r5_bundles * 3
-    while counter > 0:
-        for sku in r5_deal:
-            while sku_freq[sku] > 0 and counter > 0:
-                sku_freq[sku] -= 1
-                counter -= 1
-
-    # apply savings in the case of buy x to get y free
-    for sku, deals in offer_map_free.items():
-        get_sku_freq = sku_freq[sku]
-        for deal in deals:
-            x = deal[0]
-            y = deal[1]
-            y_sku = deal[2]
-            num_free = get_sku_freq // x
-            if sku == y_sku:
-                num_free = get_sku_freq // ( x +y)
-                sku_freq[y_sku] -= num_free
-            else:
-                if sku_freq[y_sku] >= num_free * y:
-                    sku_freq[y_sku] -= num_free * y
-                else:
-                    sku_freq[y_sku] = 0
-            get_sku_freq -= num_free * x
-
-    # calculate checkout fees with deals
-    for sku, sku_freq in sku_freq.items():
-        if sku in offer_map:
-            deals = offer_map[sku]
-            temp_sku_freq = sku_freq
-            for deal in deals:
-                group_quantity = deal[0]
-                group_cost = deal[1]
-                groups = temp_sku_freq // group_quantity
-                temp_sku_freq -= groups * group_quantity
-                total = groups * group_cost
-                total_checkout_value += total
-            total_checkout_value += temp_sku_freq * price_map[sku]
+    item_counts = {}
+    total_price = 0
+    skus = sorted(skus)
+    for item in skus:
+        if item in price_table:
+            item_counts[item] = item_counts.get(item, 0) + 1
         else:
-            total_checkout_value += sku_freq * price_map[sku]
+            return -1
 
-    return total_checkout_value
+    item_counts_copy = item_counts.copy()
+    count_special_three = 0
+    running_offer_price = 0
+    min_price = 100
+    prices = []
+    for item, count in item_counts.items():
+        if 'special_offer' in price_table[item]:
+            special_offers = sorted(price_table[item]['special_offer'], reverse=True)
 
-def test_checkout_empty():
-    assert checkout("") == 0
+            for offer in special_offers:
 
-def test_checkout_valid_basic():
-    assert checkout("AAAA") == 180
-    assert checkout("ABCD") == 115
-    assert checkout("AAAABCD") == 245
+                offer_qty, offer_value = offer
 
-def test_checkout_r2_deals():
-    assert checkout("AAAAAAAA") == 330
-    assert checkout("AAAAAAAAA") == 380
-    assert checkout("AAAAAAAAAEE") == checkout("AAAAAAAAABEE")
+                if not isinstance(offer_value, str):
 
-def test_checkout_invalid():
-    assert checkout("ABCZ1") == -1
+                    while count >= offer_qty:
+                        total_price += offer_value
+                        count -= offer_qty
 
-def test_checkout_r3_deals():
-    assert checkout("F") == 10
-    assert checkout("FF") == 20
-    assert checkout ("FFF") == 20
-    assert checkout ("FFFF") == 30
-    assert checkout ("FFFFFF") == 40
+                if offer_value in item_counts and count >= offer_qty:
 
-def test_checkout_r4_deals():
-    assert checkout("QQQRRR") == 210
-    assert checkout("VVVVV") == 220
-    assert checkout("NNNM") == 120
+                    count_offer = count
 
-def test_checkout_r5_deals():
-    assert checkout("STXYZ") == 82
-    assert checkout("STXYZA") == 132
+                    while count_offer >= offer_qty:
 
-test_checkout_empty()
-test_checkout_valid_basic()
-test_checkout_invalid()
-test_checkout_r2_deals()
-test_checkout_r3_deals()
-test_checkout_r4_deals()
-test_checkout_r5_deals()
+                        if item != offer_value:
+                            item_counts[offer_value] -= 1
 
+                        elif item == offer_value and count_offer > offer_qty:
+                            item_counts[offer_value] -= 1
+                            total_price -= price_table[offer_value]["price"]
 
+                        count_offer -= offer_qty
 
+                    if item_counts[offer_value] == 0:
 
+                        if "special_offer" in price_table[offer_value]:
+                            total_price = 0
+                        else:
+                            total_price -= item_counts_copy[offer_value] * price_table[offer_value]["price"]
 
+                    elif item_counts[offer_value] >= price_table[offer_value]["special_offer"][0][0] and item != offer_value:
+                        total_price -= price_table[offer_value]["price"]
+
+                    elif item_counts[offer_value] < price_table[offer_value]["special_offer"][0][0]:
+                        total_price += item_counts[offer_value] * price_table[offer_value]["price"]
+                        total_price -= price_table[offer_value]["special_offer"][0][1]
+
+        elif "special_offer_any_three" in price_table[item]:
+            count_special_three += count
+            running_offer_price += count * price_table[item]["price"]
+
+            prices.append(price_table[item]["price"])
+
+            if price_table[item]["price"] < min_price:
+                min_price = price_table[item]["price"]
+
+            if count_special_three == 3:
+                running_offer_price -= count * price_table[item]["price"]
+                total_price -= running_offer_price
+                total_price += price_table[item]["special_offer_any_three"][0][1]
+                count_special_three = 0
+                running_offer_price = 0
+                continue
+            elif count_special_three > 3:
+                running_offer_price -= count * price_table[item]["price"]
+                total_price -= running_offer_price
+                total_price += price_table[item]["special_offer_any_three"][0][1]
+
+                count_special_three -= 3
+                running_offer_price = count_special_three * price_table[item]["price"]
+                count = count_special_three
+
+            if count_special_three > 1 and len(prices) > 1:
+                prices = sorted(prices)
+                running_offer_price = 0
+
+                for i in range(count_special_three):
+                    total_price += prices[i]
+                    running_offer_price += prices[i]
+                    count -= 1
+
+            elif count_special_three == 1:
+
+                price_table[item]["price"] = min_price
+
+        total_price += count * price_table[item]['price']
+
+    return total_price
