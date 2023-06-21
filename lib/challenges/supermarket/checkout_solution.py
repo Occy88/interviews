@@ -1,148 +1,170 @@
-from collections import Counter
+
+# noinspection PyUnusedLocal
+# skus = unicode string
+
+from collections import defaultdict
+
+# Individual default prices for each SKU
+# All SKUs in this map are assumed to be valid and vice-versa
+price_map = {
+    "A" : 50,
+    "B" : 30,
+    "C" : 20,
+    "D" : 15,
+    "E" : 40,
+    "F" : 10,
+    "G" : 20,
+    "H" : 10,
+    "I" : 35,
+    "J" : 60,
+    "K" : 70,
+    "L" : 90,
+    "M" : 15,
+    "N" : 40,
+    "O" : 10,
+    "P" : 50,
+    "Q" : 30,
+    "R" : 50,
+    "S" : 20,
+    "T" : 20,
+    "U" : 40,
+    "V" : 50,
+    "W" : 20,
+    "X" : 17,
+    "Y" : 20,
+    "Z" : 21
+}
+
+# for each deal/tuple corresponding to a SKU this map takes the form of:
+# tuple[0]SKU for tuple[1]
+offer_map = {
+    "A" : [(5, 200) ,(3, 130)],
+    "B" : [(2, 45)],
+    "H" : [(10, 80), (5, 45)],
+    "K" : [(2, 120)],
+    "P" : [(5, 200)],
+    "Q" : [(3, 80)],
+    "V" : [(3, 130), (2, 90)],
+}
+
+# for each deal/tuple corresponding to a SKU this makes takes the form of:
+# tuple[0]SKU get tuple[1] tuple[2] free
+offer_map_free = {
+    "E" : [(2, 1, "B")],
+    "F" : [(2, 1, "F")],
+    "N" : [(3, 1, "M")],
+    "R" : [(3, 1, "Q")],
+    "U" : [(3, 1, "U")],
+}
+
+r5_deal = ["Z", "Y", "S", "T", "X"]
+
+def checkout(skus):
+    sku_freq = defaultdict(int)
+    # create frequency mapping logging how many times each SKU was seen in our input
+    # returns -1 if SKU not in our price_map
+    for sku in skus:
+        if sku not in price_map:
+            return -1
+        sku_freq[sku] += 1
+
+    # apply bundle deal
+    # r5_freq = defaultdict(int)
+    total_checkout_value = 0
+
+    total_r5_items = 0
+    for sku, freq in sku_freq.items():
+        if sku in r5_deal:
+            # r5_freq[sku] = freq
+            total_r5_items += freq
+
+    total_r5_bundles = total_r5_items // 3
+    total_checkout_value = total_r5_bundles * 45
+
+    counter = total_r5_bundles * 3
+    while counter > 0:
+        for sku in r5_deal:
+            while sku_freq[sku] > 0 and counter > 0:
+                sku_freq[sku] -= 1
+                counter -= 1
+
+    # apply savings in the case of buy x to get y free
+    for sku, deals in offer_map_free.items():
+        get_sku_freq = sku_freq[sku]
+        for deal in deals:
+            x = deal[0]
+            y = deal[1]
+            y_sku = deal[2]
+            num_free = get_sku_freq // x
+            if sku == y_sku:
+                num_free = get_sku_freq // ( x +y)
+                sku_freq[y_sku] -= num_free
+            else:
+                if sku_freq[y_sku] >= num_free * y:
+                    sku_freq[y_sku] -= num_free * y
+                else:
+                    sku_freq[y_sku] = 0
+            get_sku_freq -= num_free * x
+
+    # calculate checkout fees with deals
+    for sku, sku_freq in sku_freq.items():
+        if sku in offer_map:
+            deals = offer_map[sku]
+            temp_sku_freq = sku_freq
+            for deal in deals:
+                group_quantity = deal[0]
+                group_cost = deal[1]
+                groups = temp_sku_freq // group_quantity
+                temp_sku_freq -= groups * group_quantity
+                total = groups * group_cost
+                total_checkout_value += total
+            total_checkout_value += temp_sku_freq * price_map[sku]
+        else:
+            total_checkout_value += sku_freq * price_map[sku]
+
+    return total_checkout_value
+
+def test_checkout_empty():
+    assert checkout("") == 0
+
+def test_checkout_valid_basic():
+    assert checkout("AAAA") == 180
+    assert checkout("ABCD") == 115
+    assert checkout("AAAABCD") == 245
+
+def test_checkout_r2_deals():
+    assert checkout("AAAAAAAA") == 330
+    assert checkout("AAAAAAAAA") == 380
+    assert checkout("AAAAAAAAAEE") == checkout("AAAAAAAAABEE")
+
+def test_checkout_invalid():
+    assert checkout("ABCZ1") == -1
+
+def test_checkout_r3_deals():
+    assert checkout("F") == 10
+    assert checkout("FF") == 20
+    assert checkout ("FFF") == 20
+    assert checkout ("FFFF") == 30
+    assert checkout ("FFFFFF") == 40
+
+def test_checkout_r4_deals():
+    assert checkout("QQQRRR") == 210
+    assert checkout("VVVVV") == 220
+    assert checkout("NNNM") == 120
+
+def test_checkout_r5_deals():
+    assert checkout("STXYZ") == 82
+    assert checkout("STXYZA") == 132
+
+test_checkout_empty()
+test_checkout_valid_basic()
+test_checkout_invalid()
+test_checkout_r2_deals()
+test_checkout_r3_deals()
+test_checkout_r4_deals()
+test_checkout_r5_deals()
 
 
-def checkout(items):
-    prices = {
-        'A': 50,
-        'B': 30,
-        'C': 20,
-        'D': 15,
-        'E': 40,
-        'F': 10,
-        'G': 20,
-        'H': 10,
-        'I': 35,
-        'J': 60,
-        'K': 70,
-        'L': 90,
-        'M': 15,
-        'N': 40,
-        'O': 10,
-        'P': 50,
-        'Q': 30,
-        'R': 50,
-        'S': 20,
-        'T': 20,
-        'U': 40,
-        'V': 50,
-        'W': 20,
-        'X': 17,
-        'Y': 20,
-        'Z': 21,
-    }
 
-    special_double_offers = {
-        'A': [{'quantity': 5, 'price': 200}, {'quantity': 3, 'price': 130}],
-        'H': [{'quantity': 10, 'price': 80}, {'quantity': 5, 'price': 45}],
-        'V': [{'quantity': 3, 'price': 130}, {'quantity': 2, 'price': 90}],
-    }
-    special_price_offers = {
-        'B': {'quantity': 2, 'price': 45},
-        'K': {'quantity': 2, 'price': 120},
-        'P': {'quantity': 5, 'price': 200},
-        'Q': {'quantity': 3, 'price': 80},
-    }
-    special_extra_offers = {
-        'F': {'quantity': 2, 'free': 'F'},
-        'U': {'quantity': 3, 'free': 'U'},
-    }
-    special_free_offers = {
-        'E': {'quantity': 2, 'free': 'B'},
-        'N': {'quantity': 3, 'free': 'M'},
-        'R': {'quantity': 3, 'free': 'Q'},
-    }
 
-    # check if skus is empty
-    if not items:
-        return 0
-
-    # check if skus is a string
-    if not isinstance(items, str):
-        return -1
-
-    # count the frequency of each sku
-    item_counts = Counter(items)
-    total_price = 0
-
-    # check if skus contains only valid skus
-    if any([sku not in prices.keys() for sku in item_counts.keys()]):
-        return -1
-
-    # select from special_free_offer items first if available
-    for free_item, offer in special_free_offers.items():
-        if free_item in item_counts.keys() and offer['free'] in item_counts.keys():
-            count = item_counts[free_item]
-            total_free = count // offer['quantity']
-            if total_free >= 1:
-                item_counts[offer['free']] -= total_free
-                if item_counts[offer['free']] < 0:
-                    item_counts[offer['free']] = 0
-
-    # apply special_combo_offers
-    # special combo list is sorted from low to high prices
-    special_combo_offers = ['X', 'S', 'T', 'Y', 'Z']
-    # Creating a new Counter with selected items
-    selected_counts = Counter(
-        {item: item_counts[item] for item in special_combo_offers if
-         item in item_counts.keys()})
-    # Summing the values of the Counter
-    total_selected_count = sum(selected_counts.values())
-
-    if total_selected_count >= 3:
-        total_price += (total_selected_count // 3) * 45
-        # Sort the Counter by the special_combo_offers list to favour the customer
-        sorted_counter = sorted(selected_counts.items(),
-                                key=lambda x: special_combo_offers.index(x[0]))
-        total_combo_remainder_count = total_selected_count % 3
-        if total_combo_remainder_count > 0:
-            y = 0
-            while y <= total_combo_remainder_count:
-                # select the key value pairs from the sorted counter to favour the customer
-                key_y, value_y = sorted_counter[y]
-                # if the value_y is greater that remainder, use it
-                if value_y >= total_combo_remainder_count:
-                    total_price += prices[key_y] * total_combo_remainder_count
-                    break
-                item_remainder_count = value_y % 3
-                if item_remainder_count == 0:
-                    y += 1
-                    total_combo_remainder_count -= 1
-                    continue
-                total_price += prices[key_y] * item_remainder_count
-                y += item_remainder_count
-                total_combo_remainder_count -= item_remainder_count
-
-        # Subtract the selected_counts from the original counter
-        item_counts = item_counts - selected_counts
-
-    if len(item_counts) > 0:
-        for item, count in item_counts.items():
-            # apply special offers
-            if item in special_double_offers.keys():
-                offer = special_double_offers[item]
-                for o in offer:
-                    if count >= o['quantity']:
-                        total_price += (count // o['quantity']) * o['price']
-                        count %= o['quantity']
-
-            if item in special_price_offers.keys():
-                offer = special_price_offers[item]
-                if count >= offer['quantity']:
-                    total_price += (count // offer['quantity']) * offer['price']
-                    count %= offer['quantity']
-
-            if item in special_extra_offers.keys():
-                offer = special_extra_offers[item]
-                offer_quantity = offer['quantity'] + 1
-                if count >= offer_quantity:
-                    free_count = count // offer_quantity
-                    remainder_count = count % offer_quantity
-                    if remainder_count == 1:
-                        free_count += 1
-                    count = count - free_count + remainder_count
-
-                    # add the price of the remaining items
-            total_price += count * prices.get(item, 0)
-
-    return total_price
 
