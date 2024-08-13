@@ -1,2 +1,2 @@
-def checkout(skus):
+def checkout(skus:str):
     raise NotImplementedError
